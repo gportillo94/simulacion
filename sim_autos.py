@@ -81,26 +81,27 @@ def sim_entrega(N):
 
 def calcular_inventario_final():
 	for mes in tabla:
-		if(mes[INVENTARIO_FINAL] == 0):
+		if mes[INVENTARIO_FINAL] == 0:
 			mes[INVENTARIO_MENSUAL_PROM] = round ((mes[INVENTARIO_INICIAL]**2) / (2*mes[DEMANDA_AJUSTADA]))
 		else:
 			mes[INVENTARIO_MENSUAL_PROM] =  round((mes[INVENTARIO_INICIAL] + mes[INVENTARIO_FINAL])/2)
 
 def calcular_costo_total():
-	total = 0
-	unidades_faltantes = 0
-	total_inventarios = 0
+	suma_inventario_prom_mensuaul = 0
+	no_ordenes = 0
+	suma_faltantes = 0
 	for mes in tabla:
 		if(mes[ORDEN]):
-			total+=100
+			no_ordenes += 1
 		elif(mes[FALTNTE]):
-			unidades_faltantes += mes[FALTNTE]
-		total_inventarios +=mes[INVENTARIO_MENSUAL_PROM]
-	return total + unidades_faltantes*50 + total_inventarios*1.67
+			suma_faltantes += mes[FALTNTE]
+		suma_inventario_prom_mensuaul +=mes[INVENTARIO_MENSUAL_PROM]
+	return no_ordenes*100 + suma_faltantes*50 + suma_inventario_prom_mensuaul*1.67
 
 def imprimir_tabla():
+	print("I. Ini Demanda I. Fin  Faltante Orden  I. Men. Prom.")
 	for mes in tabla:
-		print(mes)
+		print("%.0f\t%.0f\t%.0f\t%.0f\t%.0f\t%.0f\t" % (mes[0],mes[1],mes[2],mes[3],mes[4],mes[5]))
 
 def limpiar_tabla():
 	for ren in range(12):
@@ -112,10 +113,9 @@ def main():
 	num_simulaciones = 10
 	q = 200
 	R = 100
-	costo_total = 0
+	costo_total = []
 
 	for i in range(num_simulaciones):
-
 		limpiar_tabla()
 		tabla[0][INVENTARIO_INICIAL] = 150
 		meses_orden = 0
@@ -132,12 +132,12 @@ def main():
 			#Cada Mes
 			if numMes > 0:
 				tabla[numMes][INVENTARIO_INICIAL] += tabla[numMes-1][INVENTARIO_FINAL] - tabla[numMes-1][FALTNTE]
-
+			
 			tabla[numMes][DEMANDA_AJUSTADA] = round(sim_demanda(random.random())*fact_estacionales[numMes])
 			#tabla[numMes][DEMANDA_AJUSTADA] = round(sim_demanda(test_num_aleatorio[numMes])*fact_estacionales[numMes])
 
 			#calculo invetario_final y faltante
-			if tabla[numMes][INVENTARIO_INICIAL] > tabla[numMes][DEMANDA_AJUSTADA]:
+			if tabla[numMes][INVENTARIO_INICIAL] >= tabla[numMes][DEMANDA_AJUSTADA]:
 				tabla[numMes][INVENTARIO_FINAL] = tabla[numMes][INVENTARIO_INICIAL] - tabla[numMes][DEMANDA_AJUSTADA]
 				tabla[numMes][FALTNTE] = 0
 			else:
@@ -145,19 +145,20 @@ def main():
 				tabla[numMes][FALTNTE] = tabla[numMes][DEMANDA_AJUSTADA] - tabla[numMes][INVENTARIO_INICIAL] 
 
 			#calculo orden
-			if tabla[numMes][INVENTARIO_FINAL] < R and not orden_en_proceso:
-				tabla[numMes][ORDEN] = 1
+			if tabla[numMes][INVENTARIO_FINAL] <= R and not orden_en_proceso:
+				
 				meses_orden = sim_entrega(random.random())
 				#meses_orden = test_meses_orden.pop()
+				tabla[numMes][ORDEN] = meses_orden
 				orden_en_proceso = True
 
 		calcular_inventario_final()
-		costo_total += calcular_costo_total()
+		costo_total.append(calcular_costo_total())
 
 		imprimir_tabla()
 		print(calcular_costo_total())
 
-	print(costo_total/num_simulaciones)
+	print(sum(costo_total)/num_simulaciones)
 
 if __name__ == '__main__':
 	main()
