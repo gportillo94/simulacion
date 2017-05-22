@@ -2,7 +2,7 @@
 
 from scipy.stats import norm
 from scipy.stats import tmean
-from scipy.stats import tstd
+import matplotlib.pyplot as plt
 import random
 
 MU = 15000
@@ -32,16 +32,27 @@ def costoManoObra():
 def utilidad (c1, c2, x):
 	return (2490 - c1 - c2)*x - 10000000
 
+def promedioUtilidadAcumulada(matrizResultados):
+	promAcumulado = []
+	utilidades = [ren[3] for ren in matrizResultados]
+	for i in range(1,len(utilidades)+1):
+		promAcumulado.append(tmean(utilidades[:i]))
+	return promAcumulado
+
 def main():
 
-	numSimulaciones = 100000
+	numSimulaciones = 10000
 	matrizResultados = []
 	for i in range(numSimulaciones):
 		nuevaSim = [costoManoObra(), costoPartes(), demanda()]
 		nuevaSim.append(utilidad(nuevaSim[0], nuevaSim[1], nuevaSim[2]))
 		matrizResultados.append(nuevaSim)
 
-	matrizResultados.sort(key=lambda x: x[3])
+	plt.figure(1)
+	plt.subplot(211)
+	plt.plot(promedioUtilidadAcumulada(matrizResultados))
+	
+	#matrizResultados.sort(key=lambda x: x[3])
 
 	total = 0
 	numSimPerdidas = 0
@@ -50,10 +61,12 @@ def main():
 		if ren[3] < 0:
 			numSimPerdidas += 1
 
-	print(matrizResultados[0])
-	print(matrizResultados[numSimulaciones-1])
 	print(total/numSimulaciones)
 	print(numSimPerdidas/float(numSimulaciones) * 100)
+
+	plt.subplot(212)
+	plt.pie([numSimPerdidas, numSimulaciones - numSimPerdidas],labels=["Perdidas", "Ganancias"], autopct='%1.1f%%')
+	plt.show()
 
 if __name__ == '__main__':
 	main()
