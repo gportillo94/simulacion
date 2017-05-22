@@ -16,7 +16,7 @@ def demanda():
 def costoPartes():
 	return (COSTO_MAX_PARTES - COSTO_MIN_PARTES)*random.random() + COSTO_MIN_PARTES
 
-def manoObra():
+def costoManoObra():
 	rnd = random.random()
 	if 0 <= rnd < 0.1:
 		return 430
@@ -37,7 +37,7 @@ def main():
 	numSimulaciones = 100000
 	matrizResultados = []
 	for i in range(numSimulaciones):
-		nuevaSim = [manoObra(), costoPartes(), demanda()]
+		nuevaSim = [costoManoObra(), costoPartes(), demanda()]
 		nuevaSim.append(utilidad(nuevaSim[0], nuevaSim[1], nuevaSim[2]))
 		matrizResultados.append(nuevaSim)
 
@@ -52,9 +52,7 @@ def main():
 
 	print(matrizResultados[0])
 	print(matrizResultados[numSimulaciones-1])
-
 	print(total/numSimulaciones)
-	
 	print(numSimPerdidas/float(numSimulaciones) * 100)
 
 if __name__ == '__main__':
