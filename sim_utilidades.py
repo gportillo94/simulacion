@@ -2,6 +2,7 @@
 
 from scipy.stats import norm
 from scipy.stats import tmean
+from scipy.stats import tstd
 import matplotlib.pyplot as plt
 import random
 
@@ -35,6 +36,7 @@ def utilidad (c1, c2, x):
 def promedioUtilidadAcumulada(matrizResultados):
 	promAcumulado = []
 	utilidades = [ren[3] for ren in matrizResultados]
+	print("Des. std. = "+str(tstd(utilidades)))
 	for i in range(1,len(utilidades)+1):
 		promAcumulado.append(tmean(utilidades[:i]))
 	return promAcumulado
@@ -61,8 +63,8 @@ def main():
 		if ren[3] < 0:
 			numSimPerdidas += 1
 
-	print(total/numSimulaciones)
-	print(numSimPerdidas/float(numSimulaciones) * 100)
+	print("Utilidad de promedio despues de "+str(numSimulaciones)+" simulaciones = "+str(total/numSimulaciones))
+	print("Probablididad de perdidas = "+str(numSimPerdidas/float(numSimulaciones)*100))
 
 	plt.subplot(212)
 	plt.pie([numSimPerdidas, numSimulaciones - numSimPerdidas],labels=["Perdidas", "Ganancias"], autopct='%1.1f%%')

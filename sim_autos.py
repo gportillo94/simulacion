@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
 import random
+import matplotlib.pyplot as plt
+from scipy.stats import tmean
 
 fact_estacionales = [1.2, 1.0, 0.9, 0.8, 0.8, 0.7, 0.8, 0.9, 1.0, 1.2, 1.3, 1.4]
-
 test_num_aleatorio = [0.74022,0.65741,0.66083,0.08355,0.55121,0.00911,0.14060,0.14845,0.41839,0.39685,0.74416,0.53152] 
-
 test_meses_orden = [2,3,1]
 
 INVENTARIO_INICIAL = 0
@@ -17,7 +17,8 @@ INVENTARIO_MENSUAL_PROM = 5
 
 tabla = [[ 0 for i in range(6)] for j in range(12)]
 
-def sim_demanda (N):
+def sim_demanda ():
+	N = random.random()
 	if 0.000 <= N < 0.010 :
 		return 35
 	elif 0.010 <= N < 0.025:
@@ -34,7 +35,7 @@ def sim_demanda (N):
 		return 41
 	elif 0.135 <= N < 0.162:
 		return 42
-	elif 0.162 <= N < 0.190	:
+	elif 0.162 <= N < 0.190:
 		return 43
 	elif 0.190 <= N < 0.219:
 		return 44
@@ -50,9 +51,9 @@ def sim_demanda (N):
 		return 49
 	elif 0.494 <= N < 0.574:
 		return 50
-	elif 0.574 <= N < 0.649	:
+	elif 0.574 <= N < 0.649:
 		return 51
-	elif 0.649 <= N < 0.719	:
+	elif 0.649 <= N < 0.719:
 		return 52
 	elif 0.719 <= N < 0.784:
 		return 53
@@ -68,10 +69,11 @@ def sim_demanda (N):
 		return 58
 	elif 0.980 <= N < 0.995:
 		return 59
-	elif 0.995 <= N < 1.000:
+	elif 0.995 <= N <= 1.000:
 		return 60
 
-def sim_entrega(N):
+def sim_entrega():
+	N = random.random()
 	if 0.000 <= N < 0.300:
 		return 1
 	elif 0.300 <= N < 0.700:
@@ -81,22 +83,23 @@ def sim_entrega(N):
 
 def calcular_inventario_final():
 	for mes in tabla:
-		if mes[INVENTARIO_FINAL] == 0:
+		if mes[INVENTARIO_INICIAL] <= 0:
+			mes[INVENTARIO_MENSUAL_PROM] = 0
+		elif mes[INVENTARIO_FINAL] == 0:
 			mes[INVENTARIO_MENSUAL_PROM] = round ((mes[INVENTARIO_INICIAL]**2) / (2*mes[DEMANDA_AJUSTADA]))
 		else:
-			mes[INVENTARIO_MENSUAL_PROM] =  round((mes[INVENTARIO_INICIAL] + mes[INVENTARIO_FINAL])/2)
+			mes[INVENTARIO_MENSUAL_PROM] = round ((mes[INVENTARIO_INICIAL] + mes[INVENTARIO_FINAL])/2)
 
 def calcular_costo_total():
+	suma_faltantes = 0
 	suma_inventario_prom_mensuaul = 0
 	no_ordenes = 0
-	suma_faltantes = 0
 	for mes in tabla:
-		if(mes[ORDEN]):
-			no_ordenes += 1
-		elif(mes[FALTNTE]):
-			suma_faltantes += mes[FALTNTE]
+		suma_faltantes += mes[FALTNTE]
 		suma_inventario_prom_mensuaul +=mes[INVENTARIO_MENSUAL_PROM]
-	return no_ordenes*100 + suma_faltantes*50 + suma_inventario_prom_mensuaul*1.67
+		if(mes[ORDEN]):
+			no_ordenes += 1	
+	return no_ordenes*100 + suma_faltantes*50 + round(suma_inventario_prom_mensuaul*1.67)
 
 def imprimir_tabla():
 	print("I. Ini Demanda I. Fin  Faltante Orden  I. Men. Prom.")
@@ -108,19 +111,19 @@ def limpiar_tabla():
 		for col in range(6):
 			tabla[ren][col] = 0
 
-def main():
+def calcular_prom_acumulado(costo_total):
+	promAcumulado = []
+	for i in range(1,len(costo_total)):
+		promAcumulado.append(tmean(costo_total[:i]))
+	return promAcumulado
 
-	num_simulaciones = 10
-	q = 200
-	R = 100
+def simularN (num_simulaciones, q, R):
 	costo_total = []
-
 	for i in range(num_simulaciones):
 		limpiar_tabla()
 		tabla[0][INVENTARIO_INICIAL] = 150
 		meses_orden = 0
 		orden_en_proceso = False
-
 		for numMes in range(12):
 
 			if orden_en_proceso and meses_orden == 0:
@@ -132,8 +135,13 @@ def main():
 			#Cada Mes
 			if numMes > 0:
 				tabla[numMes][INVENTARIO_INICIAL] += tabla[numMes-1][INVENTARIO_FINAL] - tabla[numMes-1][FALTNTE]
-			
-			tabla[numMes][DEMANDA_AJUSTADA] = round(sim_demanda(random.random())*fact_estacionales[numMes])
+
+			#################
+			if tabla[numMes][INVENTARIO_INICIAL] < 0:
+				tabla[numMes][INVENTARIO_INICIAL] = 0
+			#################
+
+			tabla[numMes][DEMANDA_AJUSTADA] = int(sim_demanda()*fact_estacionales[numMes])
 			#tabla[numMes][DEMANDA_AJUSTADA] = round(sim_demanda(test_num_aleatorio[numMes])*fact_estacionales[numMes])
 
 			#calculo invetario_final y faltante
@@ -145,20 +153,49 @@ def main():
 				tabla[numMes][FALTNTE] = tabla[numMes][DEMANDA_AJUSTADA] - tabla[numMes][INVENTARIO_INICIAL] 
 
 			#calculo orden
-			if tabla[numMes][INVENTARIO_FINAL] <= R and not orden_en_proceso:
-				
-				meses_orden = sim_entrega(random.random())
+			if tabla[numMes][INVENTARIO_FINAL] < R and not orden_en_proceso:	
+				meses_orden = sim_entrega()
 				#meses_orden = test_meses_orden.pop()
 				tabla[numMes][ORDEN] = meses_orden
 				orden_en_proceso = True
 
 		calcular_inventario_final()
 		costo_total.append(calcular_costo_total())
+		
+		#imprimir_tabla()
+		#print(costo_total[i])
+		
+	return costo_total
 
-		imprimir_tabla()
-		print(calcular_costo_total())
+def main():
+	random.seed()
+	num_simulaciones = 30
+	q = 50
+	R = 50
 
-	print(sum(costo_total)/num_simulaciones)
+	costos_totales = simularN(num_simulaciones,q,R)
+	print(sum(costos_totales)/num_simulaciones)
+	prom_acumulado = calcular_prom_acumulado(costos_totales)
 
+	plt.plot(prom_acumulado)
+	plt.show()
+
+	'''
+
+	menor = 999999999
+	actual = 0
+	params = []
+	for q in range(140,180):
+		print(q)
+		for R in range(140,180):
+			actual = sum(simularN(num_simulaciones,q,R))
+			if actual < menor:
+				menor = actual 
+				params = [q,R]
+
+	print(menor/num_simulaciones)
+	print(params)
+	'''
+	
 if __name__ == '__main__':
 	main()
