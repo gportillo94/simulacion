@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import random
+import sys
+import argparse
+
+def ganoVolado():
+	if random.random() >= 0.5 :
+		return True
+	else:
+		return False
+
+def imprimirEncabezado(index,file):
+	file.write("***************\n"+"Simulacion no."+str(index)+"\n***************\n")
+
+def main():
+
+	ap = argparse.ArgumentParser()
+	ap.add_argument("-n", "--numSimulaciones", help="numero de simulaciones", default=100)
+	args = vars(ap.parse_args())
+
+	numSimulaciones = int(args["numSimulaciones"])
+	print("Se simulan "+str(numSimulaciones)+" juegos")
+	apuestaInicial = 10
+	resultados = []
+
+	f = open("res_sim_volados.txt", "w")
+
+	for i in range(numSimulaciones):
+		cantidad = 30
+		apuesta = apuestaInicial
+		imprimirEncabezado(i,f)
+		while cantidad>0 and cantidad <50 :
+			f.write("Cantidad antes del volado =\t\t"+str(cantidad)+"\n")
+			f.write("Apuesta =\t\t\t\t\t\t"+str(apuesta)+"\n")
+			if apuesta > cantidad:
+				apuesta = cantidad
+			if ganoVolado():
+				f.write("Ganas"+"\n")
+				cantidad = cantidad + apuesta
+				apuesta = apuestaInicial
+			else:
+				f.write("Pierdes"+"\n")
+				cantidad = cantidad - apuesta
+				apuesta = apuesta * 2
+			f.write("Cantidad despues del volado =\t"+str(cantidad)+"\n")
+			f.write("---------------"+"\n")
+		if cantidad>=50 :
+			resultados.append(1)
+		else :
+			resultados.append(0)
+	
+	prob = sum(resultados)/float(numSimulaciones)
+	print("Probabilidad de ganar = "+str(prob))
+
+if __name__ == '__main__':
+	main()

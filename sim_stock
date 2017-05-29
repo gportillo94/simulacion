@@ -1,0 +1,130 @@
+#!/usr/bin/env python
+
+from scipy.stats import norm
+from scipy.stats import tmean
+from scipy.stats import tstd
+import matplotlib.pyplot as plt
+import argparse
+import random
+import sys
+
+STOCK_PRICE = 0
+SHARES_HELD = 1
+CASH_HELD = 2
+TOTAL_WORTH = 3
+SHARES_PURCH = 4
+SHARES_SOLD = 5
+CHANGE_PRICE = 6
+
+table = [[ 0 for i in range(7)] for j in range(22)]
+totalWoths = []
+cumulativeAvg = []
+
+def calculateCumulativeAvg():
+	for i in range(1,len(totalWoths)+1):
+		cumulativeAvg.append(tmean(totalWoths[:i]))
+
+def amountSharesPurch(numDay):
+	if(table[numDay-1][STOCK_PRICE] < table[numDay][STOCK_PRICE]):
+		return round(0.1 * table[numDay][CASH_HELD] / table[numDay][STOCK_PRICE])
+	else:
+		return 0
+
+def amountSharesSold(numDay):
+	if(table[numDay-1][STOCK_PRICE] > table[numDay][STOCK_PRICE]):
+		return round(0.1 * table[numDay][SHARES_HELD])
+	else:
+		return 0
+
+def calculateTotalWorth (i):
+	return table[i][STOCK_PRICE] * table[i][SHARES_HELD] + table[i][CASH_HELD] 
+
+def calculateCashHeld(i):
+	return table[i-1][CASH_HELD] + table[i-1][STOCK_PRICE] * (table[i-1][SHARES_SOLD] - table[i-1][SHARES_PURCH])
+
+def calculateStockPrice(numDay):
+	return table[numDay][CHANGE_PRICE] + table[numDay-1][STOCK_PRICE]
+
+def calculateSharesHeld(numDay):
+	return table[numDay-1][SHARES_HELD] + table[numDay-1][SHARES_PURCH] - table[numDay-1][SHARES_SOLD]
+
+def day0(initialStockPrice, initialSharesHeld , initialCashHeld):
+	table[0][STOCK_PRICE] = initialStockPrice
+	table[0][SHARES_HELD] = initialSharesHeld
+	table[0][CASH_HELD] = initialCashHeld
+	table[0][TOTAL_WORTH] = calculateTotalWorth(0)
+	table[0][SHARES_PURCH] = 0
+	table[0][SHARES_SOLD] = 0
+	table[0][CHANGE_PRICE] = 0
+
+def dailyInvariants(numDay):
+	table[numDay][STOCK_PRICE] = calculateStockPrice(numDay)
+	table[numDay][SHARES_HELD] = calculateSharesHeld(numDay)
+	table[numDay][CASH_HELD] = calculateCashHeld(numDay)
+	table[numDay][TOTAL_WORTH] = calculateTotalWorth(numDay)
+	table[numDay][SHARES_PURCH] = amountSharesPurch(numDay)
+	table[numDay][SHARES_SOLD] = amountSharesSold(numDay)
+	
+def day1():
+	table[1][CHANGE_PRICE] = norm.ppf(random.random() , 0 , table[0][STOCK_PRICE]/100)
+	dailyInvariants(1)
+
+def dayN(numDay):
+	table[numDay][CHANGE_PRICE] = norm.ppf(random.random() , (table[numDay-1][STOCK_PRICE] - table[numDay-2][STOCK_PRICE])/10 , table[numDay-1][STOCK_PRICE]/100)
+	dailyInvariants(numDay)
+
+def printTable(f,numSim):
+	f.write("Sim. number "+str(numSim)+"\n")
+	f.write("Stock Price\t\tShares Held\tCash Held\t\tTotal Worth\t\tS. Purchase\tS. Sold\t\tChange Price\n")
+	for ren in table:
+		f.write("%.0f\t\t\t\t%.0f\t\t\t%.0f\t\t\t%.2f\t\t\t%.0f\t\t\t%.0f\t\t\t%.2f\n" % (ren[0],ren[1],ren[2],ren[3],ren[4],ren[5],ren[6]))
+
+def main():
+	ap = argparse.ArgumentParser()
+	ap.add_argument("-p", "--stockP",help = "stock price")
+	ap.add_argument("-s", "--sharesH",help = "shares held")
+	ap.add_argument("-n", "--num",help = "simulations", default=100)
+	ap.add_argument("-d", "--details",help = "print detailed simulation", default=False)
+	args = vars(ap.parse_args())
+
+	if not args["stockP"]:
+		stckPrice = 100
+	else:
+		stckPrice = int(args["stockP"])
+	if not args["sharesH"]:
+		shrsHeld = 500
+	else:
+		shrsHeld = int(args["sharesH"])
+
+	cashHeld = 50000
+
+	if args["details"]:
+		f = open("res_sim_stock.txt", "w")
+
+	print("Welcome to the Stock Market Simulation Using Monte Carlo Techniques")
+	print("Please wait while the "+str(args["num"])+" simulations are performed")
+	print("Stock Price = "+str(stckPrice))
+	print("Shares Held = "+str(shrsHeld))
+
+	for numSim in range(int(args["num"])):
+		day0(stckPrice, shrsHeld,cashHeld )
+		day1()
+		for numDay in range(2,22):
+			dayN(numDay)
+		totalWoths.append(table[21][TOTAL_WORTH])
+		if args["details"]:
+			printTable(f,numSim)
+			
+	print("Results")
+	print("Mean = "+str(tmean(totalWoths)))
+	print("Standard Deviation = " + str(tstd(totalWoths)))	
+	totalBegin = cashHeld+stckPrice*shrsHeld
+	print("P&L = " + str( (tmean(totalWoths) - totalBegin)))
+
+	calculateCumulativeAvg()
+
+	plt.plot(cumulativeAvg)
+	plt.show()
+
+if __name__ == '__main__':
+	main()

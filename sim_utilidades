@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+
+from scipy.stats import norm
+from scipy.stats import tmean
+from scipy.stats import tstd
+import matplotlib.pyplot as plt
+import random
+import argparse
+
+MU = 15000
+SIGMA = 4500
+COSTO_MAX_PARTES = 1000
+COSTO_MIN_PARTES = 800
+
+def demanda():
+	res = norm.ppf(random.random() , MU, SIGMA)
+	if res<1500:
+		return 1500
+	elif res>28500:
+		return 28500
+	return round(res)
+
+def costoPartes():
+	return (COSTO_MAX_PARTES - COSTO_MIN_PARTES)*random.random() + COSTO_MIN_PARTES
+
+def costoManoObra():
+	rnd = random.random()
+	if 0 <= rnd < 0.1:
+		return 430
+	elif 0.1 <= rnd < 0.3:
+		return 440 
+	elif 0.3 <= rnd < 0.7:
+		return 450
+	elif 0.7 <= rnd < 0.9:
+		return 460
+	elif 0.9 <= rnd < 1:
+		return 470
+
+def utilidad (c1, c2, x):
+	return (2490 - c1 - c2)*x - 10000000
+
+def promedioUtilidadAcumulada(matrizResultados):
+	promAcumulado = []
+	utilidades = [ren[3] for ren in matrizResultados]
+	print("\tDes. std. = "+str(tstd(utilidades)))
+	for i in range(1,len(utilidades)+1):
+		promAcumulado.append(tmean(utilidades[:i]))
+	return promAcumulado
+
+def imprimirMatrizResultados(matrizResultados):
+	f = open("res_sim_utilidades.txt", "w")
+	f.write("C. mano de obra\t\tC. Partes\t\tDemanda\t\tUtilidad\n")
+	for ren in matrizResultados:
+		f.write("%.2f\t\t\t\t%.2f\t\t\t%.0f\t\t%.0f\t\n" % (ren[0],ren[1],ren[2],ren[3]))
+
+def main():
+	ap = argparse.ArgumentParser()
+	ap.add_argument("-n", "--numSimulaciones", help="numero de simulaciones", default=100)
+	ap.add_argument("-d", "--detalles",help = "imprimir todas las simulaciones", default=False)
+	args = vars(ap.parse_args())
+
+	numSimulaciones = int(args["numSimulaciones"])
+	matrizResultados = []
+	for i in range(numSimulaciones):
+		nuevaSim = [costoManoObra(), costoPartes(), demanda()]
+		nuevaSim.append(utilidad(nuevaSim[0], nuevaSim[1], nuevaSim[2]))
+		matrizResultados.append(nuevaSim)
+
+	print("Resultados despues de "+str(numSimulaciones)+" simulaciones")
+	plt.figure(1)
+	plt.subplot(211)
+	plt.title("Utilidad Promedio Acumulada")
+	plt.plot(promedioUtilidadAcumulada(matrizResultados))
+	
+	matrizResultados.sort(key=lambda x: x[3])
+
+	if args["detalles"]:
+		imprimirMatrizResultados(matrizResultados)
+
+	total = 0
+	numSimPerdidas = 0
+	for ren in matrizResultados:
+		total += ren[3]
+		if ren[3] < 0:
+			numSimPerdidas += 1
+
+	print("\tUtilidad promedio despues de "+str(numSimulaciones)+" simulaciones = "+str(total/numSimulaciones))
+	print("\tUtilidad maxima = "+str(matrizResultados[0][3]))
+	print("\tUtilidad minma = "+str(matrizResultados[numSimulaciones-1][3]))
+	print("\tProbablididad de perdidas = "+str(numSimPerdidas/float(numSimulaciones)*100)+"%")
+
+	plt.subplot(212)
+	plt.pie([numSimPerdidas, numSimulaciones - numSimPerdidas],labels=["Perdidas", "Ganancias"], autopct='%1.1f%%')
+	plt.show()
+
+if __name__ == '__main__':
+	main()
